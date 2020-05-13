@@ -54,7 +54,7 @@ void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) {
 	DWORD tactical_window = 0xdd9b18;
 	Tactical_Window* tw = (Tactical_Window*)(*(uintptr_t*)tactical_window);
 
-	DrawText("CHEAT RUNNING", windowWidth/2, 5, D3DCOLOR_ARGB(255, 0, 255, 0));
+	//DrawText("CHEAT RUNNING", windowWidth/2, 5, D3DCOLOR_ARGB(255, 0, 255, 0));
 
 	Agent* localAgent = getLocalAgent();
 
@@ -129,23 +129,23 @@ void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) {
 						DrawFilledRect(agent_screen_pos[0] + width, mins[1]-width*4, max(width / 4,2), width*4, D3DCOLOR_ARGB(255, 33, 33, 33));
 						DrawFilledRect(agent_screen_pos[0] + width, mins[1]-h, max(width / 4,2), h, D3DCOLOR_ARGB(255, (int)((1 - val) * 255), (int)(val * 255), 0));
 						
-						std::stringstream st;
+						/*std::stringstream st;
 						st << std::hex << agent;
 						std::string res(st.str());
-						DrawText(res.c_str(), agent_screen_pos[0], agent_screen_pos[1], D3DCOLOR_ARGB(255, 0, 255, 0));
+						DrawText(res.c_str(), agent_screen_pos[0], agent_screen_pos[1], D3DCOLOR_ARGB(255, 0, 255, 0));*/
 					}
 				}
 			}
 		}
 	}
 
-	if (localAgent != nullptr)
+	/*if (localAgent != nullptr)
 	{
 		std::stringstream st;
 		st << std::hex << localAgent;
 		std::string res(st.str());
 		DrawText(res.c_str(), 25, 25, D3DCOLOR_ARGB(255, 0, 255, 0));
-	}
+	}*/
 
 	// call og function
 	oEndScene(pDevice);
