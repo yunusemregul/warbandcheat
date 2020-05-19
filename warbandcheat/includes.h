@@ -1,8 +1,12 @@
 #pragma once
 
+
 #include <Windows.h>
 #include <iostream>
 #include <sstream>
+
+using std::cout;
+using std::endl;
 
 #include <d3d9.h>
 #include <d3dx9.h>

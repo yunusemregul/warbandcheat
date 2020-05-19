@@ -50,7 +50,7 @@ void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) {
 	if (!pDevice)
 		pDevice = o_pDevice;
 
-	DWORD cur_mission = 0x8b829c;
+	/*DWORD cur_mission = 0x8b829c;
 	DWORD tactical_window = 0xdd9b18;
 	Tactical_Window* tw = (Tactical_Window*)(*(uintptr_t*)tactical_window);
 
@@ -99,18 +99,7 @@ void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) {
 							if (get_immediate_enemy(localAgent) == agent->index)
 							{
 								color = D3DCOLOR_ARGB(255, 255, 0, 255);
-								/*int dir = player_attack_dir(agent, localAgent->index);
-								std::stringstream st;
-								if (dir == 3)
-									st << "top";
-								if (dir == 2)
-									st << "left";
-								if (dir == 1)
-									st << "right";
-								if (dir == 0)
-									st << "bottom";
-								std::string res(st.str());
-								DrawText(res.c_str(), agent_screen_pos[0], agent_screen_pos[1], D3DCOLOR_ARGB(255, 0, 255, 0));*/
+
 							}
 							DrawLine(windowWidth / 2, windowHeight, agent_screen_pos[0], mins[1], 1, color);
 						}
@@ -129,22 +118,10 @@ void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) {
 						DrawFilledRect(agent_screen_pos[0] + width, mins[1]-width*4, max(width / 4,2), width*4, D3DCOLOR_ARGB(255, 33, 33, 33));
 						DrawFilledRect(agent_screen_pos[0] + width, mins[1]-h, max(width / 4,2), h, D3DCOLOR_ARGB(255, (int)((1 - val) * 255), (int)(val * 255), 0));
 						
-						/*std::stringstream st;
-						st << std::hex << agent;
-						std::string res(st.str());
-						DrawText(res.c_str(), agent_screen_pos[0], agent_screen_pos[1], D3DCOLOR_ARGB(255, 0, 255, 0));*/
 					}
 				}
 			}
 		}
-	}
-
-	/*if (localAgent != nullptr)
-	{
-		std::stringstream st;
-		st << std::hex << localAgent;
-		std::string res(st.str());
-		DrawText(res.c_str(), 25, 25, D3DCOLOR_ARGB(255, 0, 255, 0));
 	}*/
 
 	// call og function
@@ -153,9 +130,10 @@ void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) {
 
 DWORD WINAPI MainThread(HMODULE hModule)
 {
-	//AllocConsole();
-	//freopen("CONOUT$", "w", stdout);
+	AllocConsole();
+	freopen("CONOUT$", "w", stdout);
 
+	Sleep(1000);
 	HANDLE handle = GetCurrentProcess();
 
 	DWORD base = (uintptr_t)GetModuleHandle(NULL);
@@ -165,11 +143,13 @@ DWORD WINAPI MainThread(HMODULE hModule)
 	player_attack_dir = (player_attack_dir_t)(0x4b00d0);
 	get_attack_dir = (get_attack_dir_t)(0x4b00d0);
 
+	cout << "* Trying to hook D3D9..." << endl;
 	// hook
 	if (GetD3D9Device(d3d9Device, sizeof(d3d9Device))) {
 		memcpy(EndSceneBytes, (char*)d3d9Device[42], 7);
 
 		oEndScene = (tEndScene)TrampHook((char*)d3d9Device[42], (char*)hkEndScene, 7);
+		cout << "* Hooking done!" << endl;
 	}
 
 	while (!GetAsyncKeyState(VK_END) & 1)
@@ -178,9 +158,10 @@ DWORD WINAPI MainThread(HMODULE hModule)
 	}
 
 	// unhook d3d9
+	cout << "* Unhook..." << endl;
 	Patch((BYTE*)d3d9Device[42], EndSceneBytes, 7);
-
-	//FreeConsole();
+	cout << "* Unhook done!" << endl;
+	FreeConsole();
 	FreeLibraryAndExitThread(hModule, NULL);
 	return 0;
 }
