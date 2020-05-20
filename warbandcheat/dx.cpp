@@ -52,6 +52,6 @@ bool GetD3D9Device(void** pTable, size_t size) {
 	memcpy(pTable, *(void***)(pDummyDevice), size);
 	pDummyDevice->Release();
 	pD3D->Release();
-	cout << "* Successfully hooked into D3D9!" << endl;
+	cout << "* Successfully created dummy D3D9 device!" << endl;
 	return true;
 }

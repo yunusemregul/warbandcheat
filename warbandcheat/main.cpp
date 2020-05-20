@@ -13,9 +13,9 @@ struct vec2
 void* d3d9Device[119];
 BYTE EndSceneBytes[7]{ 0 };
 tEndScene oEndScene = nullptr;
+tReset oReset = nullptr;
 extern LPDIRECT3DDEVICE9 pDevice = nullptr;
-
-// void __thiscall get_screen_pos_from_world_pos_maybe(int this,float *param_1_00,undefined4 param_3)
+extern boolean bReset = false;
 
 typedef float*(__thiscall* get_screen_pos_from_world_pos_t)(void* t, float *vec3, float *vec32);
 get_screen_pos_from_world_pos_t get_screen_pos_from_world_pos;
@@ -45,17 +45,45 @@ void word_to_screen(D3DXVECTOR3 world_pos, float *output)
 	output[1] = windowHeight - windowHeight * (screen_pos[1] * 1.33);
 }
 
+void APIENTRY hkReset(LPDIRECT3DDEVICE9 o_pDevice, D3DPRESENT_PARAMETERS* params)
+{
+	cout << "reset called" << endl;
+
+	oReset(o_pDevice, params);
+}
+
 // hook function
-void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) {
+void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) 
+{
 	if (!pDevice)
 		pDevice = o_pDevice;
 
-	/*DWORD cur_mission = 0x8b829c;
+	HRESULT cooperativeStatus = pDevice->TestCooperativeLevel();
+	if (cooperativeStatus == D3DERR_DEVICELOST)
+	{
+		bReset = true;
+		onLostDevice();
+	}
+	else if (cooperativeStatus == D3D_OK && bReset)
+	{
+		bReset = false;
+		cout << "* D3D9Device reset!" << endl;
+		onResetDevice();
+	}
+	if (bReset == true)
+	{
+		oEndScene(pDevice);
+		return;
+	}
+	
+	DWORD cur_mission = 0x8b829c;
 	DWORD tactical_window = 0xdd9b18;
 	Tactical_Window* tw = (Tactical_Window*)(*(uintptr_t*)tactical_window);
 
-	//DrawText("CHEAT RUNNING", windowWidth/2, 5, D3DCOLOR_ARGB(255, 0, 255, 0));
+	if(!cur_mission || !tactical_window || !tw)
+		oEndScene(pDevice);
 
+	DrawText("CHEAT RUNNING", windowWidth/2, 5, D3DCOLOR_ARGB(255, 0, 255, 0));
 	Agent* localAgent = getLocalAgent();
 
 	size_t agentlist_size = *(size_t*)(*(uintptr_t*)cur_mission + 0x8);
@@ -63,10 +91,10 @@ void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) {
 	{
 		Agent* agent = getAgent(i);
 
-		if (localAgent == nullptr || agent == nullptr)
+		if (agent == nullptr)
 			continue;
 
-		if (agent != localAgent && agent->health>0)
+		if (agent->health>0)
 		{
 			D3DXVECTOR3 pos = agent->position;
 			float agent_screen_pos[2] = { -1 };
@@ -93,13 +121,12 @@ void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) {
 					if (mins[0]!=-1 && maxs[0]!=-1)
 					{
 						D3DCOLOR color = D3DCOLOR_ARGB(255, 0, 255, 0);
-						if (is_enemy(localAgent, agent))
+						if (localAgent != nullptr && is_enemy(localAgent, agent))
 						{
 							color = D3DCOLOR_ARGB(255, 255, 0, 0);
 							if (get_immediate_enemy(localAgent) == agent->index)
 							{
 								color = D3DCOLOR_ARGB(255, 255, 0, 255);
-
 							}
 							DrawLine(windowWidth / 2, windowHeight, agent_screen_pos[0], mins[1], 1, color);
 						}
@@ -111,19 +138,17 @@ void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) {
 						DrawLine(agent_screen_pos[0] - width, mins[1], agent_screen_pos[0] - width, maxs[1], 1, color);
 						DrawLine(agent_screen_pos[0] + width, mins[1], agent_screen_pos[0] + width, maxs[1], 1, color);
 
-
 						float val = (agent->health / agent->max_health);
 						int h = val * (width*4);
 
 						DrawFilledRect(agent_screen_pos[0] + width, mins[1]-width*4, max(width / 4,2), width*4, D3DCOLOR_ARGB(255, 33, 33, 33));
 						DrawFilledRect(agent_screen_pos[0] + width, mins[1]-h, max(width / 4,2), h, D3DCOLOR_ARGB(255, (int)((1 - val) * 255), (int)(val * 255), 0));
-						
 					}
 				}
 			}
 		}
-	}*/
-
+	}
+	
 	// call og function
 	oEndScene(pDevice);
 }
@@ -136,7 +161,6 @@ DWORD WINAPI MainThread(HMODULE hModule)
 	Sleep(1000);
 	HANDLE handle = GetCurrentProcess();
 
-	DWORD base = (uintptr_t)GetModuleHandle(NULL);
 	get_screen_pos_from_world_pos = (get_screen_pos_from_world_pos_t)(0x53eef0);
 	is_enemy = (is_enemy_t)(0x4adcc0);
 	get_immediate_enemy = (get_immediate_enemy_t)(0x4afc40);
@@ -147,8 +171,11 @@ DWORD WINAPI MainThread(HMODULE hModule)
 	// hook
 	if (GetD3D9Device(d3d9Device, sizeof(d3d9Device))) {
 		memcpy(EndSceneBytes, (char*)d3d9Device[42], 7);
-
+		cout << "* Trying to hook D3D9..." << endl;
 		oEndScene = (tEndScene)TrampHook((char*)d3d9Device[42], (char*)hkEndScene, 7);
+		//oReset = (tReset)TrampHook((char*)d3d9Device[16], (char*)hkReset, 5);
+		//cout << std::hex << d3d9Device[42] << endl;
+		//cout << std::hex << d3d9Device[16] << endl;
 		cout << "* Hooking done!" << endl;
 	}
 
