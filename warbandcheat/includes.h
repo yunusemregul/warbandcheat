@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <iostream>
 #include <sstream>
+#include <math.h>
 
 using std::cout;
 using std::endl;

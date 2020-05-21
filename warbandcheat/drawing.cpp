@@ -22,12 +22,18 @@ void onResetDevice()
 
 // filled rectangle
 void DrawFilledRect(int x, int y, int w, int h, D3DCOLOR color) {
+	if (!pDevice)
+		return;
+
 	D3DRECT rect = { x,y,x + w,y + h };
 	pDevice->Clear(1, &rect, D3DCLEAR_TARGET, color, 0, 0);
 }
 
 void DrawLine(int x1, int y1, int x2, int y2, int thickness, D3DCOLOR color)
 {
+	if (!pDevice)
+		return;
+
 	if (!LineL)
 	{
 		D3DXCreateLine(pDevice, &LineL);
@@ -43,6 +49,9 @@ void DrawLine(int x1, int y1, int x2, int y2, int thickness, D3DCOLOR color)
 
 void DrawText(const char* text, int x, int y, D3DCOLOR color)
 {
+	if (!pDevice)
+		return;
+
 	RECT rect;
 
 	if (!FontF)

@@ -52,6 +52,147 @@ void APIENTRY hkReset(LPDIRECT3DDEVICE9 o_pDevice, D3DPRESENT_PARAMETERS* params
 	oReset(o_pDevice, params);
 }
 
+void drawESP()
+{
+	Agent* localAgent = getLocalAgent();
+	size_t agentlist_size = *(size_t*)(*(uintptr_t*)cur_mission + 0x8);
+	
+	for (int i = 0; i < agentlist_size; i++)
+	{
+		Agent* agent = getAgent(i);
+
+		if (!agent)
+			continue;
+
+		if (localAgent && agent == localAgent)
+			continue;
+
+		if (agent->health > 0)
+		{
+			D3DXVECTOR3 pos = agent->position;
+			float agent_screen_pos[2] = { -1 };
+			word_to_screen(pos, agent_screen_pos);
+
+			if (agent_screen_pos[0] == -1)
+				continue;
+
+			rglStrategic_Entity* strat_ent = agent->prgl_strat_ent;
+			if (strat_ent)
+			{
+				if (strat_ent->ent_min && strat_ent->ent_max)
+				{
+					D3DXVECTOR3 min = strat_ent->ent_min;
+					D3DXVECTOR3 max = strat_ent->ent_max;
+
+					float mins[2] = { -1 };
+					word_to_screen(min, mins);
+					float maxs[2] = { -1 };
+					word_to_screen(max, maxs);
+
+					float width = fabs(mins[1] - maxs[1]) / 4;
+
+					if (mins[0] != -1 && maxs[0] != -1)
+					{
+						D3DCOLOR color = D3DCOLOR_ARGB(255, 0, 255, 0);
+						if (localAgent && is_enemy(localAgent, agent))
+						{
+							color = D3DCOLOR_ARGB(255, 255, 0, 0);
+							if (get_immediate_enemy(localAgent) == agent->index)
+							{
+								color = D3DCOLOR_ARGB(255, 255, 0, 255);
+							}
+							DrawLine(windowWidth / 2, windowHeight, agent_screen_pos[0], mins[1], 1, color);
+						}
+						if (agent->is_horse == 1)
+							color = D3DCOLOR_ARGB(255, 0, 0, 255);
+
+						DrawLine(agent_screen_pos[0] - width, mins[1], agent_screen_pos[0] + width, mins[1], 1, color);
+						DrawLine(agent_screen_pos[0] - width, maxs[1], agent_screen_pos[0] + width, maxs[1], 1, color);
+						DrawLine(agent_screen_pos[0] - width, mins[1], agent_screen_pos[0] - width, maxs[1], 1, color);
+						DrawLine(agent_screen_pos[0] + width, mins[1], agent_screen_pos[0] + width, maxs[1], 1, color);
+
+						float val = (agent->health / agent->max_health);
+						int h = val * (width * 4);
+
+						DrawFilledRect(agent_screen_pos[0] + width, mins[1] - width * 4, max(width / 4, 2), width * 4, D3DCOLOR_ARGB(255, 33, 33, 33));
+						DrawFilledRect(agent_screen_pos[0] + width, mins[1] - h, max(width / 4, 2), h, D3DCOLOR_ARGB(255, (int)((1 - val) * 255), (int)(val * 255), 0));
+					}
+				}
+			}
+		}
+	}
+}
+
+#define PI 3.14
+
+void drawRADAR()
+{
+	Agent* localAgent = getLocalAgent();
+
+	if (localAgent)
+	{
+		size_t agentlist_size = *(size_t*)(*(uintptr_t*)cur_mission + 0x8);
+
+		int s = 150;
+		int ps = 3;
+		int x, y;
+		x = windowWidth - s - 20;
+		y = 100;
+		// draw background
+		DrawFilledRect(x, y, s, s, D3DCOLOR_ARGB(255, 33, 33, 33));
+		// draw x y lines
+		DrawFilledRect(x + s/2 - ps/2, y, ps, s, D3DCOLOR_ARGB(255, 55, 55, 55));
+		DrawFilledRect(x, y + s / 2 - ps / 2, s, ps, D3DCOLOR_ARGB(255, 55, 55, 55));
+		// draw local agent
+		DrawFilledRect(x + s / 2, y + s / 2, ps, ps, D3DCOLOR_ARGB(255, 255, 0, 255));
+		// draw where local agent looks
+		int lx1, ly1, lx2, ly2;
+		lx1 = x + s / 2;
+		ly1 = y + s / 2;
+
+		lx2 = sin(PI * localAgent->rotation) * 20;
+		ly2 = cos(PI * localAgent->rotation) * 20;
+
+		DrawLine(lx1, ly1, lx1+lx2, ly1+ly2, 1, D3DCOLOR_ARGB(255, 255, 255, 255));
+
+		for (int i = 0; i < agentlist_size; i++)
+		{
+			Agent* agent = getAgent(i);
+
+			if (!agent)
+				continue;
+
+			if (agent == localAgent)
+				continue;
+
+			if (agent->health > 0)
+			{
+				float xsub = localAgent->position.x - agent->position.x;
+				xsub *= 3;
+
+				if (xsub+ps/2 > s / 2 || -xsub+ps/2 > s / 2)
+					continue;
+
+				float ysub = localAgent->position.y - agent->position.y;
+				ysub *= 3;
+
+				if (ysub+ps/2 > s / 2 || -ysub+ps/2 > s / 2)
+					continue;
+
+				D3DCOLOR color = D3DCOLOR_ARGB(255, 0, 255, 0);
+				
+				if(is_enemy(localAgent, agent))
+					color = D3DCOLOR_ARGB(255, 255, 0, 0);
+
+				if (agent->is_horse)
+					color = D3DCOLOR_ARGB(255, 0, 0, 255);
+
+				DrawFilledRect(x + s / 2 - xsub - ps / 2, y + s / 2 - ysub - ps / 2, ps, ps, color);
+			}
+		}
+	}
+}
+
 // hook function
 void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice) 
 {
@@ -80,75 +221,17 @@ void APIENTRY hkEndScene(LPDIRECT3DDEVICE9 o_pDevice)
 	DWORD tactical_window = 0xdd9b18;
 	Tactical_Window* tw = (Tactical_Window*)(*(uintptr_t*)tactical_window);
 
-	if(!cur_mission || !tactical_window || !tw)
+	if (!cur_mission || !tactical_window || !tw)
+	{
 		oEndScene(pDevice);
+		return;
+	}
 
 	DrawText("CHEAT RUNNING", windowWidth/2, 5, D3DCOLOR_ARGB(255, 0, 255, 0));
-	Agent* localAgent = getLocalAgent();
 
-	size_t agentlist_size = *(size_t*)(*(uintptr_t*)cur_mission + 0x8);
-	for (int i = 0; i < agentlist_size; i++)
-	{
-		Agent* agent = getAgent(i);
+	drawESP();
+	drawRADAR();
 
-		if (agent == nullptr)
-			continue;
-
-		if (agent->health>0)
-		{
-			D3DXVECTOR3 pos = agent->position;
-			float agent_screen_pos[2] = { -1 };
-			word_to_screen(pos, agent_screen_pos);
-
-			if (agent_screen_pos[0]==-1)
-				continue;
-
-			rglStrategic_Entity* strat_ent = agent->prgl_strat_ent;
-			if (strat_ent != nullptr)
-			{
-				if (strat_ent->ent_min != nullptr && strat_ent->ent_max!=nullptr)
-				{
-					D3DXVECTOR3 min = strat_ent->ent_min;
-					D3DXVECTOR3 max = strat_ent->ent_max;
-						
-					float mins[2] = {-1};
-					word_to_screen(min, mins);
-					float maxs[2] = {-1};
-					word_to_screen(max, maxs);
-
-					float width = fabs(mins[1] - maxs[1])/4;
-
-					if (mins[0]!=-1 && maxs[0]!=-1)
-					{
-						D3DCOLOR color = D3DCOLOR_ARGB(255, 0, 255, 0);
-						if (localAgent != nullptr && is_enemy(localAgent, agent))
-						{
-							color = D3DCOLOR_ARGB(255, 255, 0, 0);
-							if (get_immediate_enemy(localAgent) == agent->index)
-							{
-								color = D3DCOLOR_ARGB(255, 255, 0, 255);
-							}
-							DrawLine(windowWidth / 2, windowHeight, agent_screen_pos[0], mins[1], 1, color);
-						}
-						if (agent->is_horse == 1)
-							color = D3DCOLOR_ARGB(255, 0, 0, 255);
-
-						DrawLine(agent_screen_pos[0]-width, mins[1], agent_screen_pos[0]+width, mins[1], 1, color);
-						DrawLine(agent_screen_pos[0] - width, maxs[1], agent_screen_pos[0] + width, maxs[1], 1, color);
-						DrawLine(agent_screen_pos[0] - width, mins[1], agent_screen_pos[0] - width, maxs[1], 1, color);
-						DrawLine(agent_screen_pos[0] + width, mins[1], agent_screen_pos[0] + width, maxs[1], 1, color);
-
-						float val = (agent->health / agent->max_health);
-						int h = val * (width*4);
-
-						DrawFilledRect(agent_screen_pos[0] + width, mins[1]-width*4, max(width / 4,2), width*4, D3DCOLOR_ARGB(255, 33, 33, 33));
-						DrawFilledRect(agent_screen_pos[0] + width, mins[1]-h, max(width / 4,2), h, D3DCOLOR_ARGB(255, (int)((1 - val) * 255), (int)(val * 255), 0));
-					}
-				}
-			}
-		}
-	}
-	
 	// call og function
 	oEndScene(pDevice);
 }
